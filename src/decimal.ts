@@ -1,3 +1,5 @@
+import { between } from "./util";
+
 export type DecimalSource = Decimal | number | string;
 
 /**
@@ -41,26 +43,54 @@ export default class Decimal {
     }
   }
 
-  public static fromComponents(sign: number, mag: number, layer: number) {
-    return new Decimal().fromComponents(sign, mag, layer);
+  get mantissa(): number {
+    if (this.sign === 0) {
+      return 0;
+    } else if (this.layer === 0) {
+      const exp = Math.floor(Math.log10(this.mag));
+
+      const mantissa = this.mag === 5e-324 ? 5 : this.mag / Math.pow(10, exp);
+      return this.sign * mantissa;
+    } else if (this.layer === 1) {
+      const residue = this.mag - Math.floor(this.mag);
+      return this.sign * Math.pow(10, residue);
+    } else {
+      return this.sign;
+    }
   }
 
-  public fromComponents(sign: number, mag: number, layer: number) {
-    this.sign = sign;
-    this.mag = mag;
-    this.layer = layer;
+  get exponent(): number {
+    if (this.sign === 0) {
+      return 0;
+    }
 
-    this.normalize();
+    switch (this.layer) {
+      case 0:
+        return Math.floor(Math.log10(this.mag));
+      case 1:
+        return Math.floor(this.mag);
+      case 2:
+        return Math.floor(
+          Math.sign(this.mag) * Math.pow(10, Math.abs(this.mag)),
+        );
+      default:
+        return this.mag * Number.POSITIVE_INFINITY;
+    }
   }
 
-  public static fromDecimal(value: Decimal) {
-    return new Decimal().fromDecimal(value);
+  private containsNaN() {
+    return (
+      Number.isNaN(this.sign) ||
+      Number.isNaN(this.layer) ||
+      Number.isNaN(this.mag)
+    );
   }
 
-  public fromDecimal(value: Decimal) {
-    this.sign = value.sign;
-    this.mag = value.mag;
-    this.layer = value.layer;
+  private isInfinite() {
+    return (
+      this.layer === Number.POSITIVE_INFINITY ||
+      this.mag == Number.POSITIVE_INFINITY
+    );
   }
 
   private normalize() {
@@ -127,27 +157,56 @@ export default class Decimal {
     }
 
     // NaN case, propogate
-    if (
-      Number.isNaN(this.sign) ||
-      Number.isNaN(this.layer) ||
-      Number.isNaN(this.mag)
-    ) {
+    if (this.containsNaN()) {
       this.sign = NaN;
       this.layer = NaN;
       this.mag = NaN;
     }
   }
 
-  private containsNaN() {
-    return (
-      Number.isNaN(this.sign) ||
-      Number.isNaN(this.layer) ||
-      Number.isNaN(this.mag)
-    );
+  public static fromComponents(sign: number, mag: number, layer: number) {
+    return new Decimal().fromComponents(sign, mag, layer);
+  }
+
+  public fromComponents(sign: number, mag: number, layer: number) {
+    this.sign = sign;
+    this.mag = mag;
+    this.layer = layer;
+
+    this.normalize();
+  }
+
+  public static fromDecimal(value: Decimal) {
+    return new Decimal().fromDecimal(value);
+  }
+
+  public fromDecimal(value: Decimal) {
+    this.sign = value.sign;
+    this.mag = value.mag;
+    this.layer = value.layer;
   }
 
   public toString() {
-    if (isNaN(this.sign) || isNaN(this.layer) || isNaN(this.mag)) {
+    if (this.containsNaN()) {
+      return "NaN";
     }
+
+    if (this.isInfinite()) {
+      return this.sign === 1 ? "Infinity" : "-Infinity";
+    }
+
+    if (this.layer > 1) {
+      const eNotation =
+        this.layer <= 5 ? "e".repeat(this.layer) : `(e^${this.layer})`;
+      const sign = this.sign === -1 ? "-" : "";
+
+      return `${sign}${eNotation}${this.mag}`;
+    }
+
+    if (this.layer === 0 && between(this.mag, 1e-7, 1e21)) {
+      return (this.sign * this.mag).toString();
+    }
+
+    return `${this.mantissa}e${this.exponent}`;
   }
 }
