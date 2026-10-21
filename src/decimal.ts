@@ -203,7 +203,7 @@ export default class Decimal {
       return `${sign}${eNotation}${this.mag}`;
     }
 
-    if (this.layer === 0 && between(this.mag, 1e-7, 1e21)) {
+    if ((this.layer === 0 && between(this.mag, 1e-7, 1e21)) || this.mag === 0) {
       return (this.sign * this.mag).toString();
     }
 
