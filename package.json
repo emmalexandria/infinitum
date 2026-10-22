@@ -1,17 +1,17 @@
 {
-  "name": "tsdown-starter",
+  "name": "infinitum",
   "type": "module",
   "version": "0.0.0",
-  "description": "A starter for creating a TypeScript package.",
-  "author": "Author Name <author.name@mail.com>",
+  "description": "A very large number Typescript library, primarily for incremental games.",
+  "author": "Emma Jellema-Butler <emma.jellemabutler@gmail.com>",
   "license": "MIT",
-  "homepage": "https://github.com/author/library#readme",
+  "homepage": "https://github.com/emmalexandria/infinitum#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/author/library.git"
+    "url": "git+https://github.com/emmalexandria/infinitum.git"
   },
   "bugs": {
-    "url": "https://github.com/author/library/issues"
+    "url": "https://github.com/emmalexandria/infinitum/issues"
   },
   "exports": {
     ".": "./dist/index.mjs",
