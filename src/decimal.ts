@@ -2,6 +2,8 @@ import { between } from "./util";
 
 export type DecimalSource = Decimal | number | string;
 
+export type CmpResult = -1 | 0 | 1;
+
 /**
  * Represents a number
  */
@@ -164,29 +166,78 @@ export default class Decimal {
     }
   }
 
-  public static fromComponents(sign: number, mag: number, layer: number) {
+  public static fromValue(value: DecimalSource): Decimal {
+    return new Decimal().fromValue(value);
+  }
+
+  public fromValue(value: DecimalSource): Decimal {
+    if (value instanceof Decimal) {
+      return this.fromDecimal(value);
+    }
+
+    if (typeof value === "number") {
+      return this.fromNumber(value);
+    }
+
+    if (typeof value === "string") {
+      throw Error("Conversion from string currently unsupported");
+    }
+
+    this.sign = 0;
+    this.layer = 0;
+    this.mag = 0;
+    return this;
+  }
+
+  public static fromNumber(value: number, normalize: boolean = true): Decimal {
+    return new Decimal().fromNumber(value, normalize);
+  }
+
+  public fromNumber(value: number, normalize: boolean = true): Decimal {
+    this.mag = Math.abs(value);
+    this.sign = Math.sign(value);
+    this.layer = 0;
+
+    if (normalize) this.normalize();
+
+    return this;
+  }
+
+  public static fromComponents(
+    sign: number,
+    mag: number,
+    layer: number,
+  ): Decimal {
     return new Decimal().fromComponents(sign, mag, layer);
   }
 
-  public fromComponents(sign: number, mag: number, layer: number) {
+  public fromComponents(
+    sign: number,
+    mag: number,
+    layer: number,
+    normalize: boolean = true,
+  ): Decimal {
     this.sign = sign;
     this.mag = mag;
     this.layer = layer;
 
-    this.normalize();
+    if (normalize) this.normalize();
+
+    return this;
   }
 
-  public static fromDecimal(value: Decimal) {
+  public static fromDecimal(value: Decimal): Decimal {
     return new Decimal().fromDecimal(value);
   }
 
-  public fromDecimal(value: Decimal) {
+  public fromDecimal(value: Decimal): Decimal {
     this.sign = value.sign;
     this.mag = value.mag;
     this.layer = value.layer;
+    return this;
   }
 
-  public toString() {
+  public toString(): string {
     if (this.containsNaN()) {
       return "NaN";
     }
@@ -208,5 +259,100 @@ export default class Decimal {
     }
 
     return `${this.mantissa}e${this.exponent}`;
+  }
+
+  /* Arithmetic functions */
+
+  public add(value: DecimalSource): Decimal {
+    const other = Decimal.fromValue(value);
+
+    // NOTE: break_eternity does a check for -inf + inf = NaN here:
+    // but i'm not sure that actually makes sense given that
+    // our decimal representation normalizes -inf to inf, so
+    // i left it out for now
+
+    // if (
+    //   (this.eq(Decimal.dInf) && decimal.eq(Decimal.dNegInf)) ||
+    //   (this.eq(Decimal.dNegInf) && decimal.eq(Decimal.dInf))
+    // ) {
+    //   return new Decimal(Decimal.dNaN);
+    // }
+
+    // NOTE: also here, break_eternity checks for infinity in a non-internally consistent way (as far as i can tell)
+    // elsewhere in the library, we consider an infinity in either sign or layer as
+    // being an infinite number (which seems correct), the original library only
+    // considered infinities in layer when checking here
+    if (this.isInfinite()) {
+      return new Decimal(this);
+    }
+    if (other.isInfinite()) {
+      return new Decimal(other);
+    }
+
+    if (this.sign === 0) {
+      return new Decimal(other);
+    }
+    if (other.sign === 0) {
+      return new Decimal(this);
+    }
+
+    if (
+      this.sign === -other.sign &&
+      this.layer === other.layer &&
+      this.mag === other.mag
+    ) {
+      return Decimal.fromNumber(0);
+    }
+
+		// TODO: copied from break_eternity, the intuition here is that addition becomes insignificant layer 2 and above.
+		// i want to verify that.
+    if (this.layer >= 2 || other.layer >= 2) {
+      return this.maxabs(other);
+    }
+
+    let a;
+    let b;
+
+		if()
+  }
+
+  public abs(): Decimal {
+    return Decimal.fromComponents(
+      this.sign === 0 ? 0 : 1,
+      this.layer,
+      this.mag,
+    );
+  }
+
+  /* Comparison functions */
+
+  /** Calculates the maximum absolute decimal between the instance and passed value
+   *	@returns The maximum absolute decimal.
+   * **/
+  public maxabs(value: DecimalSource): Decimal {
+    const other = Decimal.fromValue(value);
+    return this.cmpabs(other) < 0 ? new Decimal(other) : new Decimal(this);
+  }
+
+  /** Comparison function for the absolute value of two decimals.
+   *
+   * @returns 1 if passed decimal is smaller, -1 if bigger, 0 if equivalent.
+   * **/
+  public cmpabs(value: DecimalSource): CmpResult {
+    const other = Decimal.fromValue(value);
+
+    // NOTE: break_eternity seems to have internally inconsistent abs logic here. for some reason, it
+    // negates the layer if mag is negative, but elsewhere in the library,
+    // we would determine negative/positive by the sign, not by the magnitude. a negative magnitude doesn't
+    // even really make sense, it would just serve as a division. maybe i'm missing something, so im leaving this note.
+
+    if (this.layer > other.layer) return 1;
+    if (other.layer > this.layer) return -1;
+
+    // numbers are on the same layer, turn to mag
+    if (this.mag > other.mag) return 1;
+    if (other.mag > this.mag) return -1;
+
+    return 0;
   }
 }
