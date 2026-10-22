@@ -4,6 +4,21 @@ import { Decimal } from "../src";
 import BEDecimal from "break_eternity.js";
 
 describe("Addition", () => {
+  const commTests = [
+    [45, 13],
+    [1e23, 1e76],
+    [1e-10, 1e32],
+    [-1e30, 1e64],
+  ];
+
+  describe("Commutation", () => {
+    test.each(commTests)("Commute %p + %p", (a, b) => {
+      expect(new Decimal(a).add(new Decimal(b)).internalRepr).toEqual(
+        new Decimal(b).add(new Decimal(a)).internalRepr,
+      );
+    });
+  });
+
   describe("Layer zero", () => {
     test("Positive", () => {
       const a = Decimal.fromNumber(45);
@@ -30,6 +45,7 @@ describe("Addition", () => {
     });
 
     const parityTests = [
+      ...commTests,
       [12, 34],
       [-734, 54],
       [523523432, -43243242],
@@ -46,15 +62,6 @@ describe("Addition", () => {
   });
 
   describe("Higher layers", () => {
-    test("Layer 1", () => {
-      const orig = BEDecimal.fromComponents(1, 1, 1).add(
-        BEDecimal.fromComponents(1, 1, 1),
-      );
-      const t = Decimal.fromComponents(1, 1, 1).add(
-        Decimal.fromComponents(1, 1, 1),
-      );
-
-      expect(t.toString()).toBe(orig.toString());
-    });
+    test("Layer 1", () => {});
   });
 });

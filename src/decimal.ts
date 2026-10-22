@@ -6,23 +6,31 @@ export type CmpResult = -1 | 0 | 1;
 
 const MAX_DIGITS = 17;
 
+export interface LayeredRepr {
+  sign: number;
+  mag: number;
+  layer: number;
+}
+
 /**
  * Represents a number
  */
 export default class Decimal {
-  /** The sign of the `Decimal` value. */
+  /** The sign of the value. */
   public sign: number;
-  /** The "magnitude" of a `Decimal` value represents the exponent to which we raise our layers.
+
+  /** The "layer" of a `Decimal` value represents the power of 10 we raise to the magnitude.
+   *
+   * */
+  public layer: number;
+
+  /** The "magnitude" of the value value.
    *
    *	@remarks
    *	`Decimal` represents numbers with a stack of exponents. The last exponent is the magnitude, this value.
    *	The rest are 10^10^10 where layers = 3.
    * */
   public mag: number;
-  /** The "layer" of a `Decimal` value represents the power of 10 we raise to the magnitude.
-   *
-   * */
-  public layer: number;
 
   /**
    * Constructs a `Decimal` instance representing zero.
@@ -80,6 +88,22 @@ export default class Decimal {
       default:
         return this.mag * Number.POSITIVE_INFINITY;
     }
+  }
+
+  /** Returns the internal representation of the {@link Decimal} as an object.
+   *
+   * @remarks
+   * Primarily exists for testing purposes, as it is a lightweight object that can be easily created outside
+   * of the {@link Decimal} interface while still representing the same internal representation.
+   *
+   * @returns A {@link LayeredRepr} for use in testing.
+   * **/
+  get internalRepr(): LayeredRepr {
+    return {
+      sign: this.sign,
+      layer: this.layer,
+      mag: this.mag,
+    };
   }
 
   private get scaledLayer(): number {
@@ -262,8 +286,6 @@ export default class Decimal {
 
     return `${this.mantissa}e${this.exponent}`;
   }
-
-  public toLongString(): string {}
 
   /* Arithmetic functions */
 
