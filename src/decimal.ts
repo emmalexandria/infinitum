@@ -304,16 +304,26 @@ export default class Decimal {
       return Decimal.fromNumber(0);
     }
 
-		// TODO: copied from break_eternity, the intuition here is that addition becomes insignificant layer 2 and above.
-		// i want to verify that.
+    // TODO: copied from break_eternity, the intuition here is that addition becomes insignificant layer 2 and above.
+    // i want to verify that.
     if (this.layer >= 2 || other.layer >= 2) {
       return this.maxabs(other);
+    }
+
+    if (this.layer === 0 && other.layer === 0) {
+      return Decimal.fromNumber(this.sign * this.mag + other.sign * other.mag);
     }
 
     let a;
     let b;
 
-		if()
+    if (Decimal.cmpabs(this, other) > 0) {
+      a = new Decimal(this);
+      b = new Decimal(other);
+    }
+
+    //NOTE: again here, break_eternity seems to be using some conception of a negative magnitude, but only caring about its sign?
+    //and multiplying layer by it? I really don't understand.
   }
 
   public abs(): Decimal {
@@ -326,27 +336,27 @@ export default class Decimal {
 
   /* Comparison functions */
 
-	/** Static version of `maxabs`. Takes two decimals and calculates which has a greater absolute value.
-	 * @returns The maximum absolute decimal.
-	 * **/
-	public static maxabs(value: DecimalSource, other: DecimalSource): Decimal {
-		return Decimal.fromValue(value).maxabs(other);
-	}
+  /** Static version of `maxabs`. Takes two decimals and calculates which has a greater absolute value.
+   * @returns The maximum absolute decimal.
+   * **/
+  public static maxabs(value: DecimalSource, other: DecimalSource): Decimal {
+    return Decimal.fromValue(value).maxabs(other);
+  }
 
   /** Calculates the maximum absolute decimal between the instance and passed value
    *	@returns The maximum absolute decimal.
-   * **/ 
+   * **/
   public maxabs(value: DecimalSource): Decimal {
     const other = Decimal.fromValue(value);
     return this.cmpabs(other) < 0 ? new Decimal(other) : new Decimal(this);
   }
 
-	/** Static version of `cmpabs`. Takes two decimals and compares them.
-	 * @returns 1 if `other` is smaller, -1 if bigger, 0 if equivalent 
-	 * **/
-	public static cmpabs(value: DecimalSource, other: DecimalSource): CmpResult {
-		return Decimal.fromValue(value).cmpabs(other);
-	}
+  /** Static version of `cmpabs`. Takes two decimals and compares them.
+   * @returns 1 if `other` is smaller, -1 if bigger, 0 if equivalent
+   * **/
+  public static cmpabs(value: DecimalSource, other: DecimalSource): CmpResult {
+    return Decimal.fromValue(value).cmpabs(other);
+  }
 
   /** Comparison function for the absolute value of two decimals.
    *
@@ -355,13 +365,11 @@ export default class Decimal {
   public cmpabs(value: DecimalSource): CmpResult {
     const other = Decimal.fromValue(value);
 
-    // NOTE: break_eternity seems to have internally inconsistent abs logic here. for some reason, it
-    // negates the layer if mag is negative, but elsewhere in the library,
-    // we would determine negative/positive by the sign, not by the magnitude. a negative magnitude doesn't
-    // even really make sense, it would just serve as a division. maybe i'm missing something, so im leaving this note.
+    const thisLayer = this.mag > 0 ? this.layer : -this.layer;
+    const otherLayer = other.mag > 0 ? other.layer : -other.layer;
 
-    if (this.layer > other.layer) return 1;
-    if (other.layer > this.layer) return -1;
+    if (thisLayer > otherLayer) return 1;
+    if (otherLayer > thisLayer) return -1;
 
     // numbers are on the same layer, turn to mag
     if (this.mag > other.mag) return 1;
