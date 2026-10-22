@@ -207,21 +207,21 @@ export default class Decimal {
 
   public static fromComponents(
     sign: number,
-    mag: number,
     layer: number,
+    mag: number,
   ): Decimal {
     return new Decimal().fromComponents(sign, mag, layer);
   }
 
   public fromComponents(
     sign: number,
-    mag: number,
     layer: number,
+    mag: number,
     normalize: boolean = true,
   ): Decimal {
     this.sign = sign;
-    this.mag = mag;
     this.layer = layer;
+    this.mag = mag;
 
     if (normalize) this.normalize();
 
@@ -263,7 +263,13 @@ export default class Decimal {
     return `${this.mantissa}e${this.exponent}`;
   }
 
+  public toLongString(): string {}
+
   /* Arithmetic functions */
+
+  public static add(value: DecimalSource, other: DecimalSource): Decimal {
+    return Decimal.fromValue(value).add(other);
+  }
 
   public add(value: DecimalSource): Decimal {
     const other = Decimal.fromValue(value);
