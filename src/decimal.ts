@@ -143,15 +143,11 @@ export default class Decimal {
       this.mag = signmag * Math.log10(absmag);
       return;
     } else {
-      while (absmag < Math.log10(Number.MAX_SAFE_INTEGER)) {
+      while (this.layer > 0 && absmag < Math.log10(Number.MAX_SAFE_INTEGER)) {
         this.layer -= 1;
-        if (this.layer === 0) {
-          this.mag = Math.pow(10, this.mag);
-        } else {
-          this.mag = signmag * Math.pow(10, absmag);
-          absmag = Math.abs(this.mag);
-          signmag = Math.sign(this.mag);
-        }
+        this.mag = signmag * Math.pow(10, absmag);
+        absmag = Math.abs(this.mag);
+        signmag = Math.sign(this.mag);
       }
     }
 
