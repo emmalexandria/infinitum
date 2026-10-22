@@ -6,30 +6,35 @@ export type CmpResult = -1 | 0 | 1;
 
 const MAX_DIGITS = 17;
 
+/** Condensed object of the internal representation of a {@link Decimal}.
+ *
+ * @remarks Mostly for testing. However, could probably be used in some cases. Usually obtained with
+ * {@link Decimal.internalRepr}
+ * **/
 export interface LayeredRepr {
+  /** The sign of the value (-1, 0, 1) **/
   sign: number;
-  mag: number;
+  /** The layer of the value, representing the "height" of the {@link https://en.wikipedia.org/wiki/Tetration | tetration} of 10.**/
   layer: number;
+  /** The magnitude of the value, representing the final exponent which the tetration is raised to. **/
+  mag: number;
 }
 
 /**
- * Represents a number
+ * Represents a number through three values, being sign, layer, and magnitude.
+ *
+ * @remarks This representation is fundamentally based on {@link https://en.wikipedia.org/wiki/Tetration | tetration}, repeated exponentiation.  
+ * The layer represents the "height" of the tetration, height referring to the number of times we raise 10 to itself, while the magnitude is a
+ * final exponent used on this value used to allow representation of more complex values.
  */
 export default class Decimal {
   /** The sign of the value. */
   public sign: number;
 
-  /** The "layer" of a `Decimal` value represents the power of 10 we raise to the magnitude.
-   *
-   * */
+  /** The "layer" of a `Decimal` value how many times we raise 10 to itself **/
   public layer: number;
 
-  /** The "magnitude" of the value value.
-   *
-   *	@remarks
-   *	`Decimal` represents numbers with a stack of exponents. The last exponent is the magnitude, this value.
-   *	The rest are 10^10^10 where layers = 3.
-   * */
+  /** The "magnitude" of the value. **/
   public mag: number;
 
   /**
@@ -110,6 +115,7 @@ export default class Decimal {
     return this.layer * Math.sign(this.mag);
   }
 
+  /** Returns whether this instance contains any NaN **/
   private containsNaN() {
     return (
       Number.isNaN(this.sign) ||
@@ -118,6 +124,9 @@ export default class Decimal {
     );
   }
 
+  /** Returns whether this instance is infinite
+   * @remarks We consider any number with a infinity in its layer or magnitude to be infinite.
+   * **/
   private isInfinite() {
     return (
       this.layer === Number.POSITIVE_INFINITY ||
@@ -192,10 +201,18 @@ export default class Decimal {
     }
   }
 
+  /** Construct a new instance to represent the passed {@link DecimalSource} (string | number | Decimal)
+   * @param value - The source value
+   * @returns A new instance representing the passed value
+   * **/
   public static fromValue(value: DecimalSource): Decimal {
     return new Decimal().fromValue(value);
   }
 
+  /** Set this instance to represent the passed {@link DecimalSource} (string | number | Decimal)
+   * @param value - The source value  
+   * @returns This instance
+   * **/
   public fromValue(value: DecimalSource): Decimal {
     if (value instanceof Decimal) {
       return this.fromDecimal(value);
@@ -215,10 +232,20 @@ export default class Decimal {
     return this;
   }
 
+  /** Create a new `Decimal` to represent a normal Javascript `number`
+   * @param value - the number to represent
+   * @param normalize - whether to normalize the resultant instance
+   * @returns a new decimal representing the passed value
+   * **/
   public static fromNumber(value: number, normalize: boolean = true): Decimal {
     return new Decimal().fromNumber(value, normalize);
   }
 
+  /** Set this instance to represent a normal Javascript `number`.
+   *
+   * @param value - the number to represent
+   * @param normalize - whether to normalize the resultant instance
+   * @returns this instance **/
   public fromNumber(value: number, normalize: boolean = true): Decimal {
     this.mag = Math.abs(value);
     this.sign = Math.sign(value);
@@ -229,14 +256,29 @@ export default class Decimal {
     return this;
   }
 
+  /** Create a new decimal from the passed components. See {@link LayeredRepr}
+   *
+   * @param sign - The sign of the value
+   * @param layer - The degree of tetration
+   * @param magnitude - The magnitude applied on top of the tetration
+   * @returns A new `Decimal` instance representing the passed values.
+   * **/
   public static fromComponents(
     sign: number,
     layer: number,
     mag: number,
+    normalize: boolean = true,
   ): Decimal {
-    return new Decimal().fromComponents(sign, mag, layer);
+    return new Decimal().fromComponents(sign, mag, layer, normalize);
   }
 
+  /** Set this decimal to represent the passed components. See {@link LayeredRepr}
+   *
+   * @param sign - The sign of the value
+   * @param layer - The degree of tetration
+   * @param magnitude - The magnitude applied on top of the tetration
+   * @returns This instance with new values applied.
+   * **/
   public fromComponents(
     sign: number,
     layer: number,
@@ -252,10 +294,19 @@ export default class Decimal {
     return this;
   }
 
+  /** Static version of `fromDecimal`. Returns a new decimal which matches the passed instance.
+   *
+   * @params value - Decimal reference for new instance.
+   * @returns New decimal instance.
+   * **/
   public static fromDecimal(value: Decimal): Decimal {
     return new Decimal().fromDecimal(value);
   }
 
+  /** Sets this {@link Decimal} instance to match an existing instance.
+   *
+   * @returns This instance.
+   * **/
   public fromDecimal(value: Decimal): Decimal {
     this.sign = value.sign;
     this.mag = value.mag;
@@ -263,6 +314,14 @@ export default class Decimal {
     return this;
   }
 
+  /** Create a string representation of the {@link Decimal}.
+   *
+   * @remarks Many numbers representable by {@link Decimal} are far too large for any feasible exact string representation.
+   * For a more exact compressed representation, you may use {@link Decimal.internalRepr} to get the sign, layer, and magnitude values
+   * in a smaller object.
+   *
+   * @returns A representation of the value represented by this instance.
+   * **/
   public toString(): string {
     if (this.containsNaN()) {
       return "NaN";
@@ -287,12 +346,44 @@ export default class Decimal {
     return `${this.mantissa}e${this.exponent}`;
   }
 
+  /* Operations */
+
+  /** Static negation operation
+   * Takes in a decimal and returns a negative version
+   *
+   * @param value - Decimal to be negated
+   * @returns A decimal representation of the negation of the passed value
+   * **/
+  public static neg(value: DecimalSource): Decimal {
+    return Decimal.fromValue(value).neg();
+  }
+
+  /** Negation operation
+   * Negates the decimal it is called on and returns it.
+   *
+   * @returns Decimal representing negation of the instance.
+   * **/
+  public neg(): Decimal {
+    return Decimal.fromComponents(-this.sign, this.layer, this.mag);
+  }
+
   /* Arithmetic functions */
 
+  /** Static addition.
+   *
+   * @param value - LHS of addition
+   * @param other - RHS of addition
+   * @returns A decimal representing LHS + RHS.
+   * **/
   public static add(value: DecimalSource, other: DecimalSource): Decimal {
     return Decimal.fromValue(value).add(other);
   }
 
+  /** Perform addition on this decimal.
+   *
+   * @param value - RHS of addition
+   * @returns This decimal + RHS
+   * **/
   public add(value: DecimalSource): Decimal {
     const other = Decimal.fromValue(value);
 
@@ -384,6 +475,37 @@ export default class Decimal {
     );
   }
 
+  /** Static subtraction.
+   *
+   * @remarks Equivalent to Decimal.add(x, -y).
+   * @params value - LHS of subtraction
+   * @params other - RHS of subtraction
+   * @returns RHS-LHS in a new Decimal instance
+   * **/
+  public static sub(value: DecimalSource, other: DecimalSource): Decimal {
+    return Decimal.fromValue(value).sub(other);
+  }
+
+  /** Subtract from this instance in-place.
+   *
+   * @param value - the RHS of the subtraction.
+   * @returns this instance
+   * **/
+  public sub(value: DecimalSource): Decimal {
+    return this.add(Decimal.fromValue(value).neg());
+  }
+
+  /** Calculates the absolute value of the passed parameter. 
+	 * @params value - The value to make absolute 
+	 * @returns A new decimal representing the absolute value.
+  public static abs(value: DecimalSource): Decimal {
+    return Decimal.fromValue(value).abs();
+  }
+
+  /** Calculates the absolute value of the instance.
+   * @remarks Due to the representation used, this function essentially just replaces decimals with a -1 sign.
+   * @returns A new instance containing the absolute value.
+   * **/
   public abs(): Decimal {
     return Decimal.fromComponents(
       this.sign === 0 ? 0 : 1,
