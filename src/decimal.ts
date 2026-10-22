@@ -323,8 +323,8 @@ export default class Decimal {
       a = new Decimal(this);
       b = new Decimal(other);
     } else {
-      a = new Decimal(this);
-      b = new Decimal(other);
+      a = new Decimal(other);
+      b = new Decimal(this);
     }
 
     if (a.scaledLayer - b.scaledLayer >= 2) {
