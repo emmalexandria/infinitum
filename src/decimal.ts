@@ -80,6 +80,10 @@ export default class Decimal {
     }
   }
 
+  private get scaledLayer(): number {
+    return this.layer * Math.sign(this.mag);
+  }
+
   private containsNaN() {
     return (
       Number.isNaN(this.sign) ||
@@ -320,10 +324,17 @@ export default class Decimal {
     if (Decimal.cmpabs(this, other) > 0) {
       a = new Decimal(this);
       b = new Decimal(other);
+    } else {
+      a = new Decimal(this);
+      b = new Decimal(other);
     }
 
-    //NOTE: again here, break_eternity seems to be using some conception of a negative magnitude, but only caring about its sign?
-    //and multiplying layer by it? I really don't understand.
+    if (a.scaledLayer - b.scaledLayer >= 2) {
+      return a;
+    }
+
+    if (a.scaledLayer === 0 && b.scaledLayer === 1) {
+    }
   }
 
   public abs(): Decimal {
@@ -365,11 +376,8 @@ export default class Decimal {
   public cmpabs(value: DecimalSource): CmpResult {
     const other = Decimal.fromValue(value);
 
-    const thisLayer = this.mag > 0 ? this.layer : -this.layer;
-    const otherLayer = other.mag > 0 ? other.layer : -other.layer;
-
-    if (thisLayer > otherLayer) return 1;
-    if (otherLayer > thisLayer) return -1;
+    if (this.scaledLayer > other.scaledLayer) return 1;
+    if (other.scaledLayer > this.scaledLayer) return -1;
 
     // numbers are on the same layer, turn to mag
     if (this.mag > other.mag) return 1;
