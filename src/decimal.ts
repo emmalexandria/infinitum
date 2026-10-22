@@ -4,6 +4,8 @@ export type DecimalSource = Decimal | number | string;
 
 export type CmpResult = -1 | 0 | 1;
 
+const MAX_DIGITS = 17;
+
 /**
  * Represents a number
  */
@@ -282,7 +284,7 @@ export default class Decimal {
     //   return new Decimal(Decimal.dNaN);
     // }
 
-    // NOTE: also here, break_eternity checks for infinity in a non-internally consistent way (as far as i can tell)
+    // NOTE: here, break_eternity checks for infinity in a non-internally consistent way (as far as i can tell)
     // elsewhere in the library, we consider an infinity in either sign or layer as
     // being an infinite number (which seems correct), the original library only
     // considered infinities in layer when checking here
@@ -333,8 +335,29 @@ export default class Decimal {
       return a;
     }
 
-    if (a.scaledLayer === 0 && b.scaledLayer === 1) {
+    let magdiff;
+
+    if (a.scaledLayer === 0 && b.scaledLayer === -1) {
+      if (Math.abs(b.mag - Math.log10(a.mag)) > MAX_DIGITS) return a;
+      else magdiff = Math.pow(10, Math.log10(a.mag - b.mag));
     }
+
+    if (a.scaledLayer === 1 && b.scaledLayer === 0) {
+      if (Math.abs(a.mag - Math.log10(b.mag)) > MAX_DIGITS) return a;
+      else magdiff = Math.pow(10, a.mag - Math.log10(b.mag));
+    }
+
+    if (Math.abs(a.mag - b.mag) > MAX_DIGITS) return a;
+    else magdiff = Math.pow(10, a.mag - b.mag);
+
+    const magBase = a.layer === 1 && b.layer === 0 ? Math.log10(b.mag) : b.mag;
+    const mantissa = b.sign + a.sign * magdiff;
+
+    return Decimal.fromComponents(
+      Math.sign(mantissa),
+      1,
+      magBase + Math.log10(Math.abs(mantissa)),
+    );
   }
 
   public abs(): Decimal {
